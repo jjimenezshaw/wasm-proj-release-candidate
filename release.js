@@ -21,7 +21,7 @@ function change_header(release_candidate) {
 }
 
 function detect_release_candidate() {
-    const release_candidate = '9.8.1 RC1'; // leave this empty for normal releases
+    const release_candidate = 'master at 5035077 (2026-04-24)'; // leave this empty for normal releases
 
     if (release_candidate) {
         change_colors();
