@@ -21,8 +21,8 @@ function change_header(branch, release_candidate) {
 }
 
 function detect_release_candidate() {
-    const branch = '*** branch etrs89_again ***';// 'release candidate';
-    const release_candidate = 'https://github.com/OSGeo/PROJ/actions/runs/25614974253'; // leave this empty for normal releases
+    const branch = '*** master 2026-05-14***';// 'release candidate';
+    const release_candidate = 'https://github.com/OSGeo/PROJ/actions/runs/25837929810'; // leave this empty for normal releases
 
     if (release_candidate) {
         change_colors();
