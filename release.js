@@ -21,8 +21,8 @@ function change_header(branch, release_candidate) {
 }
 
 function detect_release_candidate() {
-    const branch = '*** master 2026-06-19***';// 'release candidate';
-    const release_candidate = 'https://github.com/OSGeo/PROJ/actions/runs/27836694735'; // leave this empty for normal releases
+    const branch = '*** master 2026-07-23***';// 'release candidate';
+    const release_candidate = 'https://github.com/OSGeo/PROJ/actions/runs/29994050942'; // leave this empty for normal releases
 
     if (release_candidate) {
         change_colors();
