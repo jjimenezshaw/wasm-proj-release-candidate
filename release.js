@@ -9,11 +9,11 @@ function change_colors() {
     document.body.appendChild(style);
 }
 
-function change_header(branch, release_candidate) {
+function change_header(release_candidate) {
     const header = document.querySelector('body > div > header');
     const div = document.createElement('div');
     div.classList.add('required');
-    div.innerHTML = `<br>This is running the PROJ ${branch} ${release_candidate}. <br>
+    div.innerHTML = `<br>This is running the PROJ release candidate ${release_candidate}. <br>
     Use this page just for testing purposes. <br>
     If you find anything wrong, please report it in <a href="https://github.com/OSGeo/PROJ">PROJ GitHub repository</a>
     or in its <a href="https://lists.osgeo.org/mailman/listinfo/proj">mailing list</a>`;
@@ -21,12 +21,11 @@ function change_header(branch, release_candidate) {
 }
 
 function detect_release_candidate() {
-    const branch = '*** master 2026-07-23***';// 'release candidate';
-    const release_candidate = 'https://github.com/OSGeo/PROJ/actions/runs/29994050942'; // leave this empty for normal releases
+    const release_candidate = 'Testing some development for input coordinates'; // leave this empty for normal releases
 
     if (release_candidate) {
         change_colors();
-        change_header(branch, release_candidate);
+        change_header(release_candidate);
     }
 }
 

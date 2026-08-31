@@ -13,11 +13,12 @@
     <script src="./proj/wasm/projModule.js"></script>
     <script src="./proj/projFunctions.js"></script>
 
+    <script src="./common.js"></script>
     <script src="./projinfo.js"></script>
   </head>
 
   <body>
-    <div class="main-wrapper">
+    <div class="main-wrapper main-page">
       <div id="loading-indicator" class="hidden">&#8987;</div>
 
       <header class="app-header">
@@ -60,7 +61,7 @@
                 </p>
                 <p>
                   Escape symbols like double quotes with "\", as in a sh console. However, enclosing a string (like a
-                  WKT) between single quotes may prevent you to escape every double quote.
+                  WKT) between single quotes or backticks may prevent you to escape every double quote.
                 </p>
               </div>
             </details>

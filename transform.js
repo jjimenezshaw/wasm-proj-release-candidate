@@ -77,15 +77,17 @@ function setEpochEnabled(prefix, isEnabled) {
     // validateForm();
 }
 
-function showPointsInMap(proj) {
+function showPointsInMap(proj, relative_path) {
     const coords = document.getElementById('source-coordinates').value;
     if (!coords.trim()) {
         console.log('No points to show in the map.');
         return;
     }
+    const firstColumnIsId = document.getElementById('first-column-is-id').checked;
 
-    const points = parseInputCoordinates(coords).map((e) => e.slice(0, 2));
-
+    let [points, ids] = parseInputCoordinates(coords, firstColumnIsId);
+    points = points.map((e) => e.slice(0, 2));
+    relative_path ??= '.';
     let transformer;
     try {
         const s = getCrsFromInput('source');
@@ -97,8 +99,13 @@ function showPointsInMap(proj) {
             promote_to_3D: false,
         });
         const transformed = transformer.transform({ points: points });
-        const res = transformed.map((point) => point.map((e) => e.toFixed(6)).join(',')).join(';');
-        const mapUrl = `./pointsinmap.html?points=${res}`;
+        const labels = firstColumnIsId
+            ? ids.map((p) => encodeURIComponent(encodeURIComponent(p)))
+            : Array.from({ length: transformed.length }, (_, i) => String(i + 1));
+        const res = transformed
+            .map((point, idx) => `${labels[idx]},${point.map((e) => e.toFixed(6)).join(',')}`)
+            .join(';');
+        const mapUrl = `${relative_path}/pointsinmap.html?points=${res}`;
         window.open(mapUrl, '_blank');
     } catch (e) {
         console.error(`Error showing in a map: ${e}`);
@@ -109,24 +116,11 @@ function showPointsInMap(proj) {
 }
 
 async function handleTransform(proj_worker) {
-    const sourceCoords = document.getElementById('source-coordinates').value;
-
-    if (!sourceCoords.trim()) return;
-
-    const output = document.getElementById('target-coordinates');
-    output.value = '... computing ...';
-    console.time('transformation');
-
-    const promote3D = document.getElementById('promote-3d').checked;
-    const useNetwork = document.getElementById('use-network').checked;
-
-    const points = parseInputCoordinates(sourceCoords);
-
-    const summaryBox = document.getElementById('transformation-summary');
-    summaryBox.innerText = '';
     let transformer;
     try {
         try {
+            const promote3D = document.getElementById('promote-3d').checked;
+            const useNetwork = document.getElementById('use-network').checked;
             const s = getCrsFromInput('source');
             const t = getCrsFromInput('target');
             transformer = await proj_worker.create_transformer_from_crs({
@@ -141,28 +135,9 @@ async function handleTransform(proj_worker) {
             output.value = `Error:${e}`;
             return;
         }
-        try {
-            const transformed = await transformer.transform({ points: points });
-            const dp = document.getElementById(`decimal-places`).value;
-
-            const res = transformed
-                .map((point) => point.map((e, index) => e.toFixed(index < 2 ? dp : 4)).join(' '))
-                .join('\n');
-            output.value = res;
-        } catch (e) {
-            output.value = `Error:${e}`;
-            return;
-        }
-        try {
-            const lastOp = await transformer.get_last_operation();
-            const date = new Date().toLocaleString();
-            summaryBox.innerText = `${lastOp.description}\n\n${lastOp.proj_5}\n\n${date}`;
-        } catch (e) {
-            summaryBox.innerText = `Error: ${e}`;
-        }
+        await handleTransformCommon(transformer);
     } finally {
-        if (transformer) await transformer.dispose();
-        console.timeEnd('transformation');
+        await transformer?.dispose();
     }
 }
 
@@ -183,7 +158,9 @@ async function _proj_set_log_level(level) {
 let proj;
 let g_proj_worker; // just for debug function proj_set_log_level
 
-async function load() {
+async function load(opts) {
+    if (!document.querySelector('.main-page') && !opts.wasm_dir) return;
+
     const appContent = document.getElementById('app-content');
     const loader = document.getElementById('loading-indicator');
     loader.classList.remove('hidden');
@@ -191,27 +168,38 @@ async function load() {
     console.log('Downloading resources...', Date());
     let proj_worker;
     let run;
+    const ret = {};
     try {
         proj = new Proj();
-        await proj.init();
+        await proj.init(undefined, undefined, { wasm_dir: opts.wasm_dir });
         const info = proj.proj_info();
+        const database_metadata = proj.database_metadata();
         console.log('proj_info', info);
-        console.log('database_metadata', proj.database_metadata());
+        console.log('database_metadata', database_metadata);
+        Object.assign(ret, info);
+        Object.assign(ret, database_metadata);
         document.getElementById('proj-version').innerText = info.version;
-        document.getElementById('proj-version').title = info.compilation_date;
+        document.getElementById('proj-version').title = dictionaryToString(info, '\n');
         const crs_list = get_crs_list();
         /////////////////////////
-        const bridge = new WorkerBridge();
+        const bridge = new WorkerBridge(undefined, opts.wasm_worker_dir);
         proj_worker = bridge.create_main_proxy();
         g_proj_worker = proj_worker;
-        await proj_worker.init();
+        await proj_worker.init(undefined, undefined, { wasm_dir: opts.wasm_worker_dir });
+        const info_w = await proj_worker.proj_info();
+        console.log('proj_info_w', info_w);
+        for (const [key, value] of Object.entries(info)) {
+            if (info_w[key] !== value) {
+                throw new Error('wasm in main thread and worker are different');
+            }
+        }
 
         setupComboboxes(crs_list);
 
         run = await loadFromURLParams(crs_list);
         updateAfterLoadUrl(crs_list);
 
-        setupEventListeners(proj_worker, proj, crs_list);
+        setupEventListeners(proj_worker, proj, crs_list, undefined, opts.map_relative_path);
         setupEventListenersTransform(proj_worker, proj, crs_list);
 
         console.log('Ready.', Date());
@@ -223,6 +211,7 @@ async function load() {
         appContent.classList.remove('loading-state');
     }
     if (run && proj_worker) handleTransform(proj_worker);
+    return ret;
 }
 
 window.addEventListener('load', load);

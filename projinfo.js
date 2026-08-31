@@ -62,15 +62,17 @@ function clearField(targetId) {
 function parseParams(commandLine) {
     // Regex Breakdown:
     // 1. "([^"\\]*(?:\\.[^"\\]*)*)" : Matches double quotes, allowing escaped chars \"
-    // 2. '([^'\\]*(?:\\.[^'\\]*)*)' : Matches single quotes, allowing escaped chars \'
-    // 3. (?:\\(?=\s)|[^\s\\])+      : Matches unquoted text, allowing escaped spaces \
-    const regex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|((?:\\(?=\s)|[^\s\\])+)/g;
+    // 2. `([^`\\]*(?:\\.[^`\\]*)*)` : Matches backticks, allowing escaped chars \`
+    // 3. '([^'\\]*(?:\\.[^'\\]*)*)' : Matches single quotes, allowing escaped chars \'
+    // 4. (?:\\(?=\s)|[^\s\\])+      : Matches unquoted text, allowing escaped spaces \
+    const regex =
+        /"([^"\\]*(?:\\.[^"\\]*)*)"|`([^`\\]*(?:\\.[^`\\]*)*)`|'([^'\\]*(?:\\.[^'\\]*)*)'|((?:\\(?=\s)|[^\s\\])+)/g;
     const params = [];
 
     const matches = commandLine.matchAll(regex);
 
     for (const match of matches) {
-        const value = match[1] ?? match[2] ?? match[3];
+        const value = match[1] ?? match[2] ?? match[3] ?? match[4];
 
         // Clean up the escapes (e.g., changing \" to ")
         // This mimics how BASH strips the escape character after processing
@@ -110,21 +112,27 @@ function setupEventListeners(proj) {
     document.getElementById('btn-transform').addEventListener('click', () => run(proj));
 }
 
-async function load() {
+async function load(opts) {
+    if (!document.querySelector('.main-page') && !opts.wasm_dir) return;
+
     const appContent = document.getElementById('app-content');
     const loader = document.getElementById('loading-indicator');
     loader.classList.remove('hidden');
 
     console.log('Downloading resources...', Date());
 
+    const ret = {};
     try {
         const proj = new Proj();
-        await proj.init();
+        await proj.init(undefined, undefined, { wasm_dir: opts.wasm_dir });
         const info = proj.proj_info();
+        const database_metadata = proj.database_metadata();
         console.log('proj_info', info);
-        console.log('database_metadata', proj.database_metadata());
+        console.log('database_metadata', database_metadata);
+        Object.assign(ret, info);
+        Object.assign(ret, database_metadata);
         document.getElementById('proj-version').innerText = info.version;
-        document.getElementById('proj-version').title = info.compilation_date;
+        document.getElementById('proj-version').title = dictionaryToString(info, '\n');
 
         if (loadFromURLParams()) {
             run(proj);
@@ -140,6 +148,7 @@ async function load() {
         loader.classList.add('hidden');
         appContent.classList.remove('loading-state');
     }
+    return ret;
 }
 
 window.addEventListener('load', load);
