@@ -21,7 +21,7 @@ function change_header(release_candidate) {
 }
 
 function detect_release_candidate() {
-    const release_candidate = 'Testing some development for input coordinates'; // leave this empty for normal releases
+    const release_candidate = '*** 9.9.0 RC1 ***'; // leave this empty for normal releases
 
     if (release_candidate) {
         change_colors();
